@@ -1,0 +1,14 @@
+{
+  "HEK Titer (mg/L)": "HEK",
+  "Fab Tm by DSF (\u00b0C)": "Tm",
+  "SGAC-SINS AS100 ((NH4)2SO4 mM)": "SGAC-SINS",
+  "HIC Retention Time (Min)a": "HIC",
+  "SMAC Retention Time (Min)a": "SMAC",
+  "Slope for Accelerated Stability": "SAS",
+  "Poly-Specificity Reagent (PSR) SMP Score (0-1)": "PSR SMP",
+  "Affinity-Capture Self-Interaction Nanoparticle Spectroscopy (AC-SINS) \u2206\u03bbmax (nm) Average": "AC-SINS",
+  "CIC Retention Time (Min)": "CIC",
+  "CSI-BLI Delta Response (nm)": "CSI-BLI",
+  "ELISA": "ELISA",
+  "BVP ELISA": "BVP ELISA"
+}

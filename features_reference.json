@@ -1,0 +1,94 @@
+{
+  "angles": [
+    "Downsampled snapshot number",
+    "Angle (degrees)"
+  ],
+  "bonds": [
+    "Time (ps)",
+    "Hydrogen bonds (count)"
+  ],
+  "charge": [
+    "Average coordinate (nm)",
+    "Charge density (q/nm\\S3\\N)"
+  ],
+  "coloumb14": [
+    "Time (ps)",
+    "Coloumb charge short range (kJ/mol)"
+  ],
+  "coloumbSR": [
+    "Time (ps)",
+    "Coloumb charge 1-4 (kJ/mol)"
+  ],
+  "contacts": [
+    "Time (ps)",
+    "Unique residue contacts (count)"
+  ],
+  "covar": [
+    "Eigenvector index",
+    "Covariance value (nm\\S2\\N)"
+  ],
+  "distances": [
+    "Downsampled snapshot number",
+    "distance (A or nm)"
+  ],
+  "dipole": [
+    "Time (ps)",
+    "Total Dipole Moment (Debye)"
+  ],
+  "energy": [
+    "Time (ps)",
+    "Total energy (kJ/mol)"
+  ],
+  "enthalpy": [
+    "Time (ps)",
+    "Enthalpy (kJ/mol)"
+  ],
+  "field": [
+    "Average coordinate (nm)",
+    "Field strength (V/nm)"
+  ],
+  "gyr": [
+    "Time (ps)",
+    "Radius of gyration (nm)"
+  ],
+  "kinetic": [
+    "Time (ps)",
+    "Kinetic energy (kJ/mol)"
+  ],
+  "lj14": [
+    "Time (ps)",
+    "Lennard Jones potential short range (kJ/mol)"
+  ],
+  "ljSR": [
+    "Time (ps)",
+    "Lennard Jones potential 1-4 (kJ/mol)"
+  ],
+  "partition-sasa": [],
+  "per-block-s2": [],
+  "per-res-s2": [],
+  "potential": [
+    "Time (ps)",
+    "Potential energy (kJ/mol)"
+  ],
+  "pv": [
+    "Time (ps)",
+    "Pressure Volume ratio"
+  ],
+  "rmsd": [
+    "Time (ps)",
+    "Root mean squared deviation (nm)"
+  ],
+  "rmsf": [
+    "Atom index",
+    "Root mean squared fluctuation (nm)"
+  ],
+  "sasa": [
+    "Time (ps)",
+    "Total Solvent Accesible Surface Area (nm\\S2\\N)"
+  ],
+  "temperature": [
+    "Time (ps)",
+    "Temperature (K)"
+  ],
+  "lambda": []
+}
