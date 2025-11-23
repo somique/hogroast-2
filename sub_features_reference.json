@@ -1,0 +1,129 @@
+{
+  "contacts": {
+    "x_mean": "contacts_mean",
+    "x_std": "contacts_std"
+  },
+  "sasa": {
+    "x_mean": "sasa_mean",
+    "x_std": "sasa_std"
+  },
+  "partition-sasa": {
+    "x_mean": "partition-sasa_mean",
+    "x_std": "partition-sasa_std"
+  },
+  "per-res-s2": {
+    "x_mean": "per-res-s2_mean",
+    "x_std": "per-res-s2_std"
+  },
+  "per-block-s2": {
+    "x_mean": "per-block-s2_mean",
+    "x_std": "per-block-s2_std"
+  },
+  "angles": {
+    "x_mean": "HLangle_mean",
+    "x_std": "HLangle_std",
+    "z_mean": "HC1angle_mean",
+    "z_std": "HC1angle_std",
+    "r_mean": "LC1angle_mean",
+    "r_std": "LC1angle_std",
+    "l_mean": "HC2angle_mean",
+    "l_std": "HC2angle_std",
+    "k_mean": "LC2angle_mean",
+    "k_std": "LC2angle_std"
+  },
+  "distances": {
+    "x_mean": "DCdistance_mean",
+    "x_std": "DCdistance_std",
+    "y_mean": "PPdistance_mean",
+    "y_std": "PPdistance_std",
+    "z_mean": "H1fromCLdistance_mean",
+    "z_std": "H1fromCLdistance_std",
+    "r_mean": "L1fromCHdistance_mean",
+    "r_std": "L1fromCHdistance_std",
+    "l_mean": "H2fromCLdistance_mean",
+    "l_std": "H2fromCLdistance_std",
+    "k_mean": "L2fromCHdistance_mean",
+    "k_std": "L2fromCHdistance_std"
+  },
+  "bonds": {
+    "x_mean": "hbonds_mean",
+    "x_std": "hbonds_std"
+  },
+  "covar": {
+    "x_mean": "covar_mean",
+    "x_std": "covar_std"
+  },
+  "rmsd": {
+    "x_mean": "rmsd_mean",
+    "x_std": "rmsd_std"
+  },
+  "gyr": {
+    "x_mean": "Rgyr_mean",
+    "x_std": "Rgyr_std",
+    "y_mean": "Rgyr_Xaxis_mean",
+    "y_std": "Rgyr_Xaxis_std",
+    "z_mean": "Rgyr_Yaxis_mean",
+    "z_std": "Rgyr_Yaxis_std",
+    "r_mean": "Rgyr_Zaxis_mean",
+    "r_std": "Rgyr_Zaxis_std"
+  },
+  "dipole": {
+    "x_mean": "dipole_X_mean",
+    "x_std": "dipole_X_std",
+    "y_mean": "dipole_Y_mean",
+    "y_std": "dipole_Y_std",
+    "z_mean": "dipole_Z_mean",
+    "z_std": "dipole_Z_std",
+    "r_mean": "dipole_T_mean",
+    "r_std": "dipole_T_std"
+  },
+  "lj14": {
+    "x_mean": "LJpotential_1-4_mean",
+    "x_std": "LJpotential_1-4_std"
+  },
+  "ljSR": {
+    "x_mean": "LJpotential_short-range_mean",
+    "x_std": "LJpotential_short-range_std"
+  },
+  
+  "coloumb14": {
+    "x_mean": "coulomb_1-4_mean",
+    "x_std": "coloumb_1-4_std"
+  },
+  "coloumbSR": {
+    "x_mean": "coulomb_short-range_mean",
+    "x_std": "coloumb_short-range_std"
+  },
+  "potential": {
+    "x_mean": "potential_energy_mean",
+    "x_std": "potential_energy_std"
+  },
+  "kinetic": {
+    "x_mean": "kinetic_energy_mean",
+    "x_std": "kinetic_energy_std"
+  },
+  "energy": {
+    "x_mean": "total_energy_mean",
+    "x_std": "total_energy_std"
+  },
+  "temperature": {
+    "x_mean": "temperature_mean",
+    "x_std": "temperature_std"
+  },
+  "pv": {
+    "x_mean": "pressur_volume_mean",
+    "x_std": "pressure_volume_std"
+  },
+  "enthalpy": {
+    "x_mean": "enthalpy_mean",
+    "x_std": "enthalpy_std"
+  },
+  "charge": {
+    "x_mean": "charge_mean",
+    "x_std": "charge_std"
+  },
+  "rmsf": {
+    "x_mean": "rmsf_mean",
+    "x_std": "rmsf_std"
+  }
+}
