@@ -1,0 +1,996 @@
+\documentclass[11pt]{article}
+\usepackage{graphicx}
+\usepackage{amsmath, amssymb}
+\usepackage{hyperref}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{tabularx}
+\usepackage{longtable}
+\usepackage{chngpage}
+\usepackage{geometry}
+\usepackage{float}
+\usepackage{caption}
+\usepackage{placeins}
+\usepackage[toc,page]{appendix}
+\usepackage[backend=biber,style=numeric, sorting=none]{biblatex} % CHANGE THIS TO NUMBERS CITATIONS
+\addbibresource{HOGROAST.bib}
+
+\graphicspath{{figures/}{figure/raw_figs/}}
+
+\title{Molecular Dynamics Informed Prediction of Antibody Thermostability}
+\author{Hew Phipps \\[0.5em]
+ \small Department of Statistics, The University of Oxford \\[0.1em]
+ \small Supervised by Prof. Charlotte Deane, Santiago Villalba and Dr Matthew Raybould
+}
+\date{\today}
+
+\begin{document}
+ \maketitle
+ \newpage
+
+\section{Introduction}
+Antibodies are large Y-shaped proteins constituting the adaptive
+immune system's primary effectors thought to bind with high specificity 
+to their targets. Typical monoclonal antibodies (mAbs) are made up 
+of two pairings of heavy-light chain heterodimers where the heavy 
+chains join at the stem (Fc region) via disulfide bridges. The
+arms (Fab region) are split into conserved and variable sections.
+The variable Fv region contains the binding interface which is 
+primarily made up of three variable extended loop regions on the 
+end of each chain called the CDR loops. As the Fv region determines 
+binding affinity it is often the primary target in antibody design.
+
+\paragraph{}
+Historically target binding affinity has been the focal design 
+objective in antibody development, mostly because before modern 
+\textit{in silico} methods therapeutic design was best 
+achieved by rational mutation of, and or chimeric recombination of 
+Fv regions onto reliable IgG1 Immunoglobulins, the dominant 
+class of antibodies in humans. Such ``CDR grafting'' has resulted in 
+a multitude of successful biologic drugs, like  adalimumab, as it 
+helps maintain the clinical viability of antibodies by optimising 
+their ``humanness'' and other antibody attributes colloquially known 
+as developability~\cite{mcconnellGeneralApproachAntibody2014}. 
+
+\paragraph{}
+Developability traits remain a major bottleneck in drug development 
+pipelines. These traits often have a complex relationship with binding 
+affinity~\cite{wangEarlyDeterminationPotential2024}. Computational 
+prediction of developability traits therefore makes for an appealing 
+solution to reducing developmental costs and timelines by providing 
+the opportunity to vet drug candidates before reaching clinical 
+stages where such traits could preclude advancement~\cite{jainIdentifyingDevelopabilityRisks}.
+One such developability trait is thermostability. Good thermostability is
+vital for manufacture, storage and shelf life~\cite{kuzmanLongtermStabilityPredictions2021}, 
+reducing aggregation propensity~\cite{mcconnellGeneralApproachAntibody2014}
+whilst helping prevent misfolding, and even affecting binding potency 
+~\cite{maAntibodyStabilityKey2020}.
+
+\paragraph{}
+Since AlphaFold2~\cite{jumperHighlyAccurateProtein2021}, sequence and structure based deep learning models
+have proven powerful predictors of protein structure. Antibody specific
+models such as ImmuneBuilder~\cite{abanadesImmuneBuilderDeepLearningModels2023}, and 
+generative models conditioned on binding targets~\cite{watsonNovoDesignProtein2023} perform 
+well \textit{in silico} highlighting the power of machine 
+learning in drug design~\cite{vecchiettiArtificialIntelligencedrivenComputational2025}. 
+Indeed, the first Machine Learning (ML) aided antibody therapeutic 
+to reach clinical use, Bimekizumab, shows superiority over 
+previous state of the art treatments for plaque psoriasis, adalimimab 
+and secukinumab~\cite{adamsBimekizumabNovelHumanized2020}, and AU-007 
+represents perhaps the first antibody therapeutic designed using 
+artificial intelligence in clinical trials~\cite{frentzasPhase122023}. 
+Deep learning language models in particular have been frequently applied 
+to the problem of thermostability prediction~\cite{pudziuvelyteTemStaProProteinThermostability2024,rodellaTemBERTureAdvancingProtein2024}
+and seem to perform well at producing antibody variants with increased stability
+~\cite{hutchinsonEnhancementAntibodyThermostability2024}. Deep 
+learning however benefits significantly from large volumes of high 
+quality data, which is readily available for sequence based learning
+(almost 2 million unique paired antibody sequences and over 2 billion
+unpaired sequences~\cite{olsenObservedAntibodySpace2022}) and structure
+prediction (over 10,000 resolved antibody structures in the PDB 
+~\cite{dunbarSAbDabStructuralAntibody2014}) but less so for 
+developability (on the scale of 100s) due to these traits' 
+multiparameter nature and the costs of experimental methods. 
+
+\paragraph{}
+Applying sequence or structure based deep learning methods to the task of 
+thermostability prediction has so far resulted in inconsistent performance
+with particularly poor results on out of training family distribution 
+datasets~\cite{chungyounFLAbBenchmarkingDeep2024}, hinting at poor 
+generalisability. Recent work suggests $\Delta \Delta \text{G}$ 
+antibody-antigen binding prediction could require data on the order 
+of $10^4$ suggesting similar numbers will be required for developability 
+traits~\cite{hummerInvestigatingVolumeDiversity2025}. To further 
+convolute the problem of training data, there are several 
+experimental metrics for thermostability, as summarised in 
+Table~\ref{tab:thermostability_metrics}.
+
+\begin{table}
+\caption{Experimental Thermostability Metrics}
+\label{tab:thermostability_metrics}
+\centering
+\begin{tabularx}{\textwidth}{X X X}
+\toprule
+\textbf{Metric} & \textbf{Description} & \textbf{Experimental Method} \\
+\midrule
+Tm1 (Melting temperature) & Temperature at which 50\% of the protein is unfolded & Differential Scanning Fluorometry (DSF) \\
+\midrule
+Tm2 (Second Melting temperature) & Second melting curve transition state & DSF melt curve 2nd transition \\
+\midrule
+Ton (Onset temperature) & Temperature at which unfolding begins & DSF inflection point of melt curve \\
+\midrule 
+Tagg (Onset of Aggregation) & Temperature at which aggregation begins & Dynamic Light Scattering (DLS) \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\paragraph{}
+Experimental conditions such as the protein:dye ratio, 
+temperature ramp rate, buffer, salts and pH, down to variations 
+within the PCR instruments used, can contribute noise to 
+data~\cite{boivinOptimizationProteinPurification2013,gooranFluorescenceBasedProteinStability2024,joshiApplicationNanoDifferential2020}. 
+Even the method of calculating Tm from a melt curve can vary from 
+taking the peak of the negative derivative, applying a two state
+model or sigmoidal fit, or just the median between the baseline and 
+the peak of the curve~\cite{baiIsothermalAnalysisThermoFluor2019,wuDSFworldFlexiblePrecise2024}.
+
+\paragraph{}
+This highlights a larger issue in that thermostability is a result 
+of not just the chemical composition of the molecule but also the 
+surrounding solvent~\cite{kuzmanLongtermStabilityPredictions2021}
+and pH~\cite{fukadaLongTermStabilityReversible2018},
+as shown by a 96 condition analysis of Trasuzumab 
+Tm~\footnote{https://www.proteinstable.com/assets/files/pdf/Formulation-screen-of-Trastuzumab-using-the-SUPR-DSF.pdf}. 
+Such external factors are difficult to incorporate into the training 
+regimes of common deep learning models. Ideally, predictive models 
+will be capable of generalising beyond environmental context, which 
+is why many approaches focus on intrinsic chemical traits known to 
+contribute to thermostability such as the number of internal contacts, 
+the overall Lennard Jones (LJ) potential and the presence of salt bridges 
+and disulfide bonds~\cite{peccatiAccuratePredictionEnzyme2023,zhouProCeSaContrastEnhancedStructureAware2025}. 
+Aromatic ring stacking at the interface between the constant and variable 
+regions has been shown to be a large contributor to the stability of 
+adalimumab~\cite{yoshikawaAnalysisThermostabilitySeven2023} and the 
+introduction of disulfide bonds increased denaturation temperature by 
+$6.5^\circ \text{C}$~\cite{yoshikawaStabilizationAdalimumabFab2024}.
+
+\paragraph{}
+Deep learning methods may therefore benefit from added physics-based 
+information. Indeed, ThermML shows how just providing Rosetta energy
+features can improve thermostability classification of single chain
+Fv region variants~\cite{harmalkarGeneralizablePredictionAntibody}.
+Physics informed approaches like PIDiff~\cite{choiPIDiffPhysicsInformed2024b} 
+have shown how incorporating the LJ of the antigen-antibody binding 
+interface can significantly improve the binding affinity of diffusion 
+model-generated antibodies. Such a ``physics informed'' approach could 
+be of great benefit to stability prediction by reducing the reliance 
+on data whilst suffering less from the likes of evolutionary bias
+seen in sequence based deep learning models. For example, Chungyoun et al.~\cite{chungyounFLAbBenchmarkingDeep2024}
+show how sequence based deep learning models have poor performance
+predicting thermostability for antibodies out of the training set 
+families and assign higher fitness to the wild type antibody 
+sequence despite achieving lower thermostability than select mutants,
+whilst a Rosetta energy-based model avoids this pitfall.
+
+\paragraph{}
+Proteins are dynamic and exist across a multitude of conformations responsive 
+to their environment which are not easily captured by classic structure prediction 
+models trained on solved crystal structures~\cite{cuiStaticStructuresProtein2025}. 
+Classical statistical mechanics enables us to estimate molecule 
+stability from ensembles of conformations with states more commonly 
+represented being energetically more stable. Thus, equilibrium ensemble 
+approaches can learn the energy landscape of a protein~\cite{lewisScalableEmulationProtein2024a},
+potentially enabling thermostability prediction with higher accuracy.
+
+\paragraph{}
+MD provides a solution to the above within the limit of 
+computational efficiency. The ergodic hypothesis states that 
+conformational statistics captured from simulations over sufficient 
+time approximate large ensembles~\cite{grossfieldQuantifyingUncertaintySampling2009}. 
+As MD is an atomistic level simulation driven by Newtonian mechanics 
+it also serves as a plausible ground truth for molecular physics. 
+So, training a model on MD trajectories offers an opportunity for 
+physics informed learning that can capture ensemble statistics. 
+Such an MD informed approach for antibody thermostability prediction 
+was recently applied to nanobodies~\cite{bekkerThermalStabilitySingledomain2019a} 
+as well as mAb Fv regions by Merck~\cite{rollinsAbMeltLearningAntibody2024b},
+who simulated 25 internal IgG1 Fv structures for 100ns at 300K, 350K and 
+400K and used a number of descriptor features from the MD data to predict Tm, 
+Tagg and Ton with high accuracy, a method they called AbMelt.
+
+\paragraph{}
+In this work we take inspiration from AbMelt's approach, applying 
+it to a public antibody thermostability dataset of 137 therapeutic 
+mAbs standardised on human IgG1 isotypes in Hepes-buffered 
+saline~\cite{jainBiophysicalPropertiesClinicalstage2017a}.
+We present HOGROAST, a robust and modular refactor of AbMelt for
+antibody Tm prediction from GROMACS MD simulations. With HOGROAST 
+we also implement antibody Fv region angular dynamics analysis using 
+ABangle~\cite{dunbarABangleCharacterisingVH2013}
+and provide an additional simulation protocol for coarse graining 
+with Martini which enables a 7x improvement in computation time 
+allowing for simulation at the microsecond level where larger 
+conformational dynamics begin to arise~\cite{lindorff-larsenStructureDynamicsUnfolded2012}. 
+We show how these new features also contribute to aggregation 
+propensity prediction using experimental results 
+from the Jain et al.~\cite{jainBiophysicalPropertiesClinicalstage2017a}
+set and discuss why our results are significantly different to
+AbMelt's, alongside the potential for further work.
+
+
+\newpage{}
+
+\section{Methods}
+
+\subsection{Training Test Split}
+\label{sec:Training Test Split}
+A total of 137 antibody Fv region sequences and associated 
+developability assay data was retrieved from Jain et al.~\cite{jainBiophysicalPropertiesClinicalstage2017a}
+by csv file. Antibodys were split into train and test sets by 
+clustering by Levenshtein distance sequence similarity with the 
+agglomerative clustering algorithm. The train-test split was 
+produced by taking the combination of clusters that came closest 
+to a 70--30\% ratio in sequence counts without splitting 
+clusters between sets. The test set was held out from
+all analyses and training until model testing. For cross validation 
+(CV), the training set was split into 3 folds 
+to give 3 CV sets taking a Leave One Out strategy (LOO). Folds were
+produced by clustering the train set alone by sequence similarity as 
+before and grouping clusters into folds without splitting clusters 
+across folds to achieve as similar antibody counts for each fold
+as possible.
+
+\subsection{Internal Contacts}
+\label{sec:internal_contacts}
+As in AbMelt, we define internal contacts as the number of 
+intramolecular residue pairs within a distance of 3.5\AA. To 
+calculate this for static pdb structures, we use Biopython's
+PDB parser tools~\cite{cockBiopythonFreelyAvailable2009} and 
+iterate through all possible atom pairs, tallying a residue pair 
+once if at least one atom pair is within 3.5\AA. We used 
+MDAnalysis~\cite{michaud-agrawalMDAnalysisToolkitAnalysis2011}
+to load trajectories and its FastNS neighbour search function to 
+count the number of contacts for each frame.
+
+\subsection{Correlation Analysis}
+\label{sec:Correlation Analysis}
+All correlations throughout this work refer to Pearson's correlation
+coefficient ($r_p$), which denotes the strength and correlation direction
+(slope of the gradient) of the optimal linear relationship between
+two variables (Equation~\ref{eq:pearson}).
+
+\begin{equation}
+r_p = \frac{\text{cov}(X, Y)}{\sigma_X \sigma_Y}
+\label{eq:pearson}
+\end{equation}
+Where $X$ and $Y$ are sets of observations and $\sigma_X$ and 
+$\sigma_Y$ are their standard deviations. Within this text we 
+refer to the 11 Jain et al. assay metrics for each antibody as 
+"fitness features" (Table~\ref{tab:jain_metrics}) corresponding
+with $Y$ whilst the MD descriptor features for each antibody 
+correspond to $X$.
+
+\paragraph{}
+To compare different datasets of correlations between antibody MD
+features and fitness features such as Tm we use a number of 
+matrix comparison statistics. For two datasets of Pearson's $r_p$ 
+correlation coefficients as matrices $A \in \mathbb{R}^{n \times m}$ 
+and $B \in \mathbb{R}^{n \times m}$ where each row $a_i$ and $b_i$ 
+corresponds to the vector of correlations for sample $i$ of $n$ 
+across $m$ features, we compute:
+
+\begin{enumerate}
+  \item The mean $\mu_r$ of all $|r_p|$ for each dataset is computed as:
+      \begin{equation}
+      \mu_r = \frac{1}{n \cdot m} \sum_{i=1}^{n} \sum_{j=1}^{m} |r_p^{i,j}|
+      \label{eq:mean_rp}
+      \end{equation}
+  \item A paired t-test $t$ on Fisher's z-transformed $r_p$ ($z$) to determine if the means of the two datasets are significantly different is computed as:
+      \begin{align}
+      \bar{d} &= \frac{1}{n} \sum_{i=1}^n (z_a^i - z_b^i) \\
+      s_d &= \sqrt{\frac{1}{n-1} \sum_{i=1}^{n} \bigl( (z_{a}^{i} - z_{b}^{i}) - \bar{d} \bigr)^2 } \\
+      t &= \frac{\bar{d}}{s_d / \sqrt{n}} 
+      \label{eq:t_test}
+      \end{align}
+  \item A Wilcoxon signed-rank test $W$ on Fisher's z-transformed $r_p$, a non-parametric test to determine if the median of differences of the two datasets is significantly different from zero, is computed as:
+      \begin{align}
+      d_i &= z_a^i - z_b^i \\
+      R_i &= \operatorname{rank}(|d_i|) \\
+      W &= \sum_{i=1}^n \operatorname{sgn}(d_i) \cdot R_i 
+      \label{eq:wilcoxon}
+      \end{align}
+   \item The difference in the Frobenius norms $\|A-B\|_F$ of two matrices of $r_p$ values was computed to gauge the difference in overall magnitude of correlations with:
+      \begin{equation}
+      \|A-B\|_F = \sqrt{ \sum_{i=1}^m \sum_{j=1}^n (a^{i,j} - b^{i,j})^2 }
+      \label{eq:frobenius}
+      \end{equation}
+\end{enumerate}
+
+Where the Fisher's z-transform, $z$, used to remove skew from the correlation matrices and approximate normality, is defined by:
+\begin{equation}
+z = \frac{1}{2} \ln\left( \frac{1 + r_p}{1 - r_p} \right)
+\label{eq:fisher_z}
+\end{equation}
+
+\paragraph{}
+To determine what $r_p$ correlations are to be considered significant
+we used a one-sample t-test for significance (Equation~\ref{eq:one_sample}) 
+for each $r_p$ in each dataset to get the number of significantly 
+correlated features and a critical $r_p$ ($r_{crit}$) at which 
+correlations less than this are rejected under the null hypothesis.
+
+\begin{align}
+t &= \frac{r_p \sqrt{n - 2}}{\sqrt{1 - (r_p)^2}} \\
+r_{\text{crit}} &= \frac{t_{\text{crit}}}{\sqrt{t_{\text{crit}}^2 + df}}
+\label{eq:one_sample}
+\end{align}
+
+Where the degrees of freedom $df$ is equal to $n-2$ and $t_{crit}$ 
+is obtained from a two tailed test equal to the $(1-\alpha/2)$ 
+percentile of the Student's t-distribution where we used an $\alpha$
+of 0.05 by default. 
+
+
+\subsection{Baselines}
+\label{sec:Establishing Baselines}
+The database TheraSAbDab~\cite{raybouldTheraSAbDabTherapeuticStructural2020} 
+was used to find PDB crystal structures for antibody sequences in 
+the Jain et al. dataset. On 26/07/25 all entries in the database were 
+downloaded from the TheraSAbDab webserver as a csv file. Using 
+Python, the data was scraped for antibodies sharing the same name 
+as any in the Jain et al. dataset. Columns pertaining to antibody 
+name and PDB ID for structures with 100\%, 99\% or 95-98\% sequence 
+similarity were collected.
+
+\paragraph{}
+For some antibodies, several PDB entries were available each
+listed with their respective heavy and light chain IDs for that PDB structure
+(often non-canonically labelled). The first PDB code and chain
+ID per structure was taken for each of the 100\%--99\% sequence 
+identity PDBs and used to scrape structures from the RSCB PDB 
+site, retrieving a PDB file for each. As the retrieved structures 
+were Fab regions they were renumbered with ANARCI~\cite{dunbarANARCIAntigenReceptor2016} 
+to extract Fv regions before hydrogens were added with PDBfixer. 
+Internal contacts for each structure was determined based on the 
+definition outlined in Section~\ref{sec:internal_contacts}. The 
+resultant structure contacts per antibody were plotted against 
+their respective Tm values to obtain a baseline correlation.
+
+\paragraph{}
+For benchmarks more comparable to molecular dynamics trajectory
+data antibody Fv region structure ensembles were generated for each 
+antibody in the Jain set with ImmuneBuilder~\cite{abanadesImmuneBuilderDeepLearningModels2023}
+using the ABodyBuilder2 model. Briefly, for each
+antibody the heavy and light chain sequences were fed into four 
+separate models to predict 4 separate structures. The closest 
+structure to the average was selected then relaxed with 
+OpenMM~\cite{eastmanOpenMM8Molecular2024} to remove structural 
+clashes. This was repeated 100 times for each antibody in the Jain
+dataset to produce a final ensemble from which the mean and 
+standard deviation of internal contacts across the ensemble was
+taken and their correlations with Tm determined.
+
+\subsection{Molecular Dynamics Simulation with GROMACS}
+All molecular dynamics simulations were performed with 
+GROMACS-2025.1~\cite{abrahamGROMACS20251Source2025}. 
+Structures were predicted from VH and VL sequences with ImmuneBuilder's
+ABodyBuilder2~\cite{abanadesImmuneBuilderDeepLearningModels2023}. 
+Histidine residue protonation states were determined by predicting 
+each structures' pKa using propka 3.1~\cite{olssonPROPKA3ConsistentTreatment2011,sondergaardImprovedTreatmentLigands2011}
+and deprotonating if it was below the physiological pH of 7.4 at which 
+all simulations were conducted. CDR loops regions were identified 
+with IMGT numbering using ANARCI~\cite{dunbarANARCIAntigenReceptor2016}, 
+and for solved PDB structures this was also used to identify heavy 
+and light chains.
+
+\paragraph{}
+All all-atom simulations followed the same protocol set out in AbMelt~\cite{rollinsAbMeltLearningAntibody2024b}. 
+In brief, all-atom simulations used the CHARMM27 (CHARMM22 $+$ CMAP) 
+force field~\cite{mackerellExtendingTreatmentBackbone2004}. The 
+system was solvated with ~9000 water molecules with the TIP3P water 
+model~\cite{jorgensenComparisonSimplePotential1983} in rectangular
+boxes of ~$5.8 \times 7.5 \times 7.3\,\mathrm{nm}^3$ and ~60 Na+ and 
+Cl- ions were added to reach a salt concentration of ~$150\,\mathrm{mM}$. 
+The total number of atoms reached ~30,000 per simulation. The 
+LeapFrog algorithm was used with $2\,\mathrm{fs}$ timesteps. First
+
+\paragraph{}
+Simulations were carried out at each temperature of 300K, 350K, 400K
+with four steps:
+\begin{enumerate}
+\item The system was relaxed with steepest descent energy minimization.
+\item Simulation with constant particle, volume and temperature (NVT) 
+canonical ensemble for $100\,\mathrm{ps}$ using the velocity rescale 
+(V-rescale) thermostat with a $0.1\,\mathrm{ps}$ time constant.
+\item Simulation with constant particle, pressure and temperature (NPT) 
+ensemble for $100\,\mathrm{ps}$ using the Berendsen barostat and a 
+$2.0\,\mathrm{ps}$ time constant to maintain isotropic pressure at 
+1.0~\text{bar}.
+\item Production simulation without restraints for $100\,\mathrm{ns}$
+with the Nose-Hoover thermostat and Parrinello-Rahman barostat to 
+maintain temperature and pressure with $2.0\,\mathrm{ps}$ and 
+$1.0\,\mathrm{ps}$ time constants, respectively, whilst saving 
+frame information every $10\,\mathrm{ps}$.
+\end{enumerate}
+
+\paragraph{}
+Long range electrostatics used the Particle Mesh Ewald algorithm (PME)
+~\cite{dardenParticleMeshEwald1993}. The Verlet cutoff scheme~\cite{pallFlexibleAlgorithmCalculating2013} 
+was used to determine short range non-bonded interactions. Bond 
+lengths were constrained with the LINCS algorithm~\cite{hessLINCSLinearConstraint1997} 
+and water with the SHAKE algorithm~\cite{ryckaertNumericalIntegrationCartesian1977}.
+
+\paragraph{}
+Simulation trajectories were fixed to correct for periodic boundary 
+jumps then the final trajectories were stripped of added water 
+molecules and ions and saved as compressed .xtc files for use with 
+GROMACS tools and MDAnalysis.
+
+\subsection{Feature Extraction}
+Features were extracted from .xtc and relevant topology files using 
+built-in GROMACS tools with the IMGT defined group indexes and 
+removing the first $20\,\mathrm{ns}$ of simulation as further equilibration 
+time following AbMelt's approach~\cite{rollinsAbMeltLearningAntibody2024b}. 
+The following GROMACS tools listed in Table~\ref{tab:gmx_commands} were used.
+
+{\tiny
+\begin{table}
+   \caption{GROMACS Tools Used For Feature Extraction}
+   \label{tab:gmx_commands}
+   \newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}  % Left-aligned fixed width
+   \newcolumntype{C}[1]{>{\centering\arraybackslash}p{#1}}   % Centered fixed width
+   \newcolumntype{R}[1]{>{\raggedleft\arraybackslash}p{#1}}  % Right-aligned fixed width
+   \centering
+      \begin{tabularx}{\linewidth}{L{2cm} L{2.9cm} L{3.1cm} C{1.5cm} C{1.5cm}}
+      \toprule
+      \textbf{GROMACS Command} & \textbf{Feature} & \textbf{Region} & \textbf{Data Type} & \textbf{Units} \\
+      \midrule
+      \texttt{gmx sasa} & Solvent Accessible Surface Area & Fv, H, L, CDRS, CDRH1, CDRH2, CDRH3, CDRL1, CDRL2, CDRL3 & time series & $\mathrm{nm}^2$ \\
+       \texttt{gmx mindist} & Internal contacts count &   Fv, H, L, CDRS, CDRH1, CDRH2, CDRH3, CDRL1, CDRL2, CDRL3 & time series & count \\
+        \texttt{gmx hbond} & Hydrogen bond count & Fv, H, L & time series & count \\
+         \texttt{gmx rms} & Root Mean Square deviation &  Fv, H, L, CDRS, CDRH1, CDRH2, CDRH3, CDRL1, CDRL2, CDRL3 & time series & $\mathrm{nm}$ \\
+          \texttt{gmx gyrate} & Radius of gyration &  Fv, H, L, CDRS, CDRH1, CDRH2, CDRH3, CDRL1, CDRL2, CDRL3 & time series & $\mathrm{nm}$ \\
+           \texttt{gmx dipole} & Dipole moment & Fv & time series & Debye \\
+            \texttt{gmx energy} & Energies & Fv & time series & various \\
+             \texttt{gmx rmsf} & Root Mean Square Fluctuation &  Fv, H, L, CDRS, CDRH1, CDRH2, CDRH3, CDRL1, CDRL2, CDRL3 & per atom & $\mathrm{nm}$ \\
+              \texttt{gmx covar} & Covariance matrix of atomic fluctuations & Fv & NA & NA \\
+               \texttt{gmx anaeig} & Eigen vector analysis of covariance matrix & Fv & Eigen values & $\mathrm{nm}/S^2/\mathrm{N}$ \\
+                \texttt{gmx potential} & Electrostatic potentials, charges and field energy across atom groups &  Fv, H, L, CDRS, CDRH1, CDRH2, CDRH3, CDRL1, CDRL2, CDRL3 & z axis average coordinate & various \\
+      \bottomrule
+   \end{tabularx}
+\end{table}
+}
+
+\paragraph{}
+Additionally, a number of extra features were computed from the 
+above, namely:
+\begin{enumerate}
+\item Partition-SASA was calculated as the SASA per residue using the
+Shrake-Rupley algorithm~\cite{shrakeEnvironmentExposureSolvent1973} 
+with MDAnalysis then selecting core and surface residues by the 20 
+residues with the least and most SASA respectively to get core and 
+surface partition-wise SASA. 
+\item N-H backbone vector order parameter $S^2$ was calculated as in 
+AbMelt with a block size of $10\,\mathrm{ns}$ and excluding prolines~\cite{rollinsAbMeltLearningAntibody2024b}.
+\item The Lambda metric is calculated as the temperature dependence of 
+S\textsuperscript{2} by the gradient and $r_p$ fit of $\ln(1-S)$ vs 
+$\ln(T)$, as described in AbMelt~\cite{rollinsAbMeltLearningAntibody2024b}
+\end{enumerate}
+
+\paragraph{}
+All feature data was collected for each antibody into a single 
+dataset of both means and stdevs (summarised in Table~\ref{tab:all_features})
+of each feature at each temperature which was used for all 
+subsequent correlation analyses. The data was further processed for 
+model feature selection and training by filtering out erronous 
+results and replacing any missing values present by 
+imputation with means to preserve the underlying statistics.
+
+\subsection{ABangle}
+ABangle~\cite{dunbarABangleCharacterisingVH2013} is a tool used for 
+the calculation of antibody Fv region inter-chain angles (Figure~\ref{fig:abangle1}). 
+Specifically, by setting a centroid vector between the structural 
+mass centroids of the heavy and light chain it calculates 5 angles: 
+HL, HC1, LC1, HC2, LC2 (Table~\ref{tab:abangle_angles}).
+
+\begin{table}
+\caption{ABangle Fv Region Angles}
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+\newcolumntype{R}[1]{>{\raggedleft\arraybackslash}p{#1}} 
+\label{tab:abangle_angles}
+\centering
+\begin{tabularx}{\textwidth}{L{2cm} L{10cm}}
+\toprule
+\textbf{Angle} & \textbf{Definition} \\
+\midrule
+HL & Angle between heavy and light chain vectors HC1 and LC1 along the centroid plane bissecting the two chains \\
+ HC1 & Angle between the HC1 and centroid vectors \\
+  LC1 & Angle between the LC1 and centroid vectors \\
+   HC2 & Angle between the HC2 and centroid vectors \\
+    LC2 & Angle between the LC2 and centroid vectors \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\paragraph{}
+To complement the angle analysis we also describe 6 distances based 
+on four points, Hp1 and Lp1 which are each set $10\text{\AA}$ from the 
+centroid point of each chain in the direction of vectors HC1 and
+LC1 respectively, and Hp2 and Lp2 similarly for vectors HC2 and
+LC2, respectively (Table~\ref{tab:abangle_distances}).
+
+\begin{table}
+\caption{ABangle Fv Region Distances}
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+\newcolumntype{R}[1]{>{\raggedleft\arraybackslash}p{#1}} 
+\label{tab:abangle_distances}
+\centering
+\begin{tabularx}{\textwidth}{L{2cm} L{10cm}}
+\toprule
+\textbf{Distance} & \textbf{Definition} \\
+\midrule
+DC & Length of the centroid vector \\
+ PP & Distance between points Hp1 and Lp1 \\
+  H1 & Distance between the point Lp1 and the centroid of chain H \\
+   L1 & Distance between the point Hp1 and the centroid of chain L \\
+    H2 & Distance between the point Lp2 and the centroid of chain H \\
+     L2 & Distance between the point Hp2 and the centroid of chain L \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\paragraph{}
+Analysis was performed with MDAanalysis on downsampled trajectories
+for computational efficiency where every 20th frame was converted to 
+a temporary pdb file for processing with ABangle. For details on how 
+ABangle defines the centroid vector and angles see~\cite{dunbarABangleCharacterisingVH2013}.
+
+
+\subsection{Martini Coarse Graining}
+\label{sec:martini}
+Coarse graining improves computational performance by orders of 
+magnitude, allowing for significantly extended simulation times with 
+minimal loss of accuracy~\cite{souzaMartini3General2021}. The 
+Martini3~\cite{souzaMartini3General2021} coarse grain force field 
+splits residues into a backbone bead comprising the backbone atoms 
+and a variable number of beads capturing side chains. 
+
+\paragraph{}
+To coarse grain an all-atom PDB, the Martinise tool from the package
+Vermouth~\cite{kroonMartinize2VermouthUnified2025} was used with elastic 
+network (harmonic spring) parameters of a $700\,\mathrm{kJ}/\mathrm{mol}/
+\mathrm{nm}^2$ spring constant, a lower distance cutoff of $0.5\,\mathrm{nm}$ 
+and upper distance cutoff of $0.5\,\mathrm{nm}$. Coarse 
+graining performs best on energetically stable structures which can 
+be obtained from a prior molecular dynamics simulation or with an 
+ensemble of structures where the most abundant conformation is 
+deemed most stable. To avoid further MD adding to computation time, 
+we opted for an ensemble strategy using ImmuneBuilder to generate 
+100 unique structures for each Fv region. A representative structure 
+was obtained by capturing structural variation within 3D space across 
+the ensemble with Principle Component Analysis (PCA) and clustering 
+then taking the medoid structure of the most populated cluster as a 
+loose approximation of the most stable conformation.
+
+\paragraph{}
+After coarse graining the representative structure the system was 
+solvated with Insane~\cite{wassenaarComputationalLipidomicsInsane2015}. 
+We used a periodic box size of 7 units, a salt concentration of 0.15 
+mol/L, and solvated the system with 100 water molecules. As with the 
+all-atom protocol, the system underwent energy minimisation with 
+steepest descent before being equilibrated with NVT and NPT 
+canonical ensembles this time for $200\,\mathrm{ps}$, followed by 
+production in NPT.
+
+\paragraph{}
+Unlike the all-atom configuration which used Nose-Hoover,
+we use the V-rescale thermostat as we found it more robust for 
+coarse grain systems which don't reproduce exact atomic dynamics. 
+We used a timestep of $10\,\mathrm{fs}$, saving frame information 
+every $10\,\mathrm{ps}$. As with all-atom, the LINCS algorithm and 
+Verlet cutoff schemes were used for bond constraints and neighbour 
+searching respectively. The C-rescale barostat with isotropic 
+pressure coupling was used for pressure scaling.
+
+\paragraph{}
+Since coarse graining removes atomistic resolution a number 
+of analyses are unavailable, such as hydrogen bond analysis which 
+relies on proton acceptor pairs. Thus, to produce the same features 
+analysis the final processed trajectories were 
+converted back to all-atom (finegraining) with the cg2all package 
+~\cite{heoOneParticleResidue2023} and subjected to the same 
+analysis as the all-atom protocol. Due to the nature of energy 
+analysis being performed on the coarse grained trajectory not the 
+cg2all trajectory the following features had to be excluded from 
+martini feature extraction: 
+lj14, ljSR, coloumb14, columbSR, kinetic, potential, and enthalpy
+(Table~\ref{tab:all_features}). Further, due to issues with 
+cg2all sometimes producing trajectory frames with overlapping atoms
+interfering with MDAnalysis' sasa analysis tool the partition-sasa 
+feature was also excluded.
+
+\paragraph{}
+RMSD analysis of cg2all trajectories was performed after aligning the
+cg2all trajectory frames and original all-atom frames to the first 
+frame in the all original atom trajectory as reference. RMSD was 
+calculated using MDAnalysis's rmsd function on backbone atoms.
+
+\paragraph{}
+To compare feature values between all-atom and cg2all simulations 
+all missing values were filtered out, and any features not shared 
+between the coarse grain analysis and all-atom were removed. The 
+difference matrix $\mathbf{F}_{diff} \in \mathbb{R}^{n \times m}$ 
+between values for every feature ($m$) for every antibody ($n$) was 
+computed with:
+\begin{equation}
+\mathbf{F}_{diff} = \mathbf{F}_{aa} - \mathbf{F}_{cg2all}
+\end{equation}
+Where $\mathbf{F}_{aa} \in \mathbb{R}^{n \times m}$ and 
+$\mathbf{F}_{cg2all} \in \mathbb{R}^{n \times m}$ refer to the 
+matrices of antibody (rows) and feature (cols) values for the all
+atom and coarse grained (finegrained) simulations respectively.
+
+\paragraph{}
+To gauge the similarity between the two feature datasets the 
+RV coefficient, which captures shared variance and agreement across 
+samples between two datasets, was computed to give a value between 0
+and 1 where 1 indicates the strongest possible overall structural 
+similarity between the two datasets, as follows:
+
+\begin{equation}
+\mathrm{RV}(\mathbf{A}, \mathbf{B}) = \frac{\langle \mathbf{A}\mathbf{A}^\top, \mathbf{B}\mathbf{B}^\top \rangle_F}{\|\mathbf{A}\mathbf{A}^\top\|_F \cdot \|\mathbf{B}\mathbf{B}^\top\|_F}
+\label{eq:rv_coefficient}
+\end{equation}
+
+Where $\mathbf{A}$ and $\mathbf{B}$ refer to the mean centered 
+$\mathbf{F}_{aa}$ and $\mathbf{F}_{cg2all}$ per antibody feature
+matrices for the all-atom and coarse grained sets respectively. 
+Mean centering was performed by subtracting the row mean 
+of each row in the matrix from every value in the respective row
+given rows are samples (antibodies) and columns features.
+
+\subsection{Machine Learning on Descriptor Features}
+Machine learning on MD features was performed as follows. First, highly 
+inter-correlated features (Pearson $r_p$ coefficient $>$ 0.95) were 
+removed. Recursive followed by exhaustive feature selection with 
+CV was performed using the 3-fold train validation splits and the 
+scikit-learn~\cite{pedregosaScikitlearnMachineLearning2011} 
+package's RFECV and EFSCV modules with its Random Forest Regressor 
+as the model fit metric whilst optimising hyperparameters with 
+Optuna~\cite{akibaOptunaNextgenerationHyperparameter2019} using 
+50 trials. This was performed separately for each developability 
+feature from the Jain et al. set.
+
+\paragraph{}
+For each of the developability fitness features, six 
+models were trained from their selected MD descriptor feature 
+subsets (Table~\ref{tab:models}). During training the same CV split 
+as feature selection was used to optimise hyperparameters and select 
+the optimal performing model before testing.
+
+\begin{table}
+\caption{Table of models used in training on each developability assay metric (fitness feature) selected features subset}
+\label{tab:models}
+\centering
+\begin{tabularx}{\textwidth}{X X X}
+\toprule
+\textbf{Model} & \textbf{Description} & \textbf{Package} \\
+\midrule
+Elastic Net & Regression with L1 and L2 regression for high dimensional data where the number of predictors is $>$ the number of samples & Scikit-learn \\
+ K Nearest Neighbours (KNN) & Non-parametric algorithm that takes the average of \boldmath{K} closest neighbours as the regression prediction & Scikit-learn \\
+  Linear regression & Models the optimal linear relationship between predictors and an outcome  & Scikit-learn \\
+   Random forest & Ensemble of decision trees where each tree is trained on a random subset of the data then takes the average of tree predictions as regression output & Scikit-learn \\
+    Support Vector Machine (SVM) & Finds a function that approximates outcomes within a margin of tolerance & Scikit-learn \\
+     XG Boost & Sequential tree building with L1 and L2 regularisation minimising a loss function that corrects errors from previous trees to find an optimal objective function & Scikit-learn \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\paragraph{}
+Each trained model for each developability fitness feature was 
+tested on the holdout test split. Accuracy was computed with
+three metrics between the predicted value and the ground truth 
+from the Jain et al. set: The coefficient of determination ($r^2$), 
+Pearson's coefficient ($r_p$) and Spearman's coefficient ($\rho$)
+as below:
+
+\begin{equation}
+r^2 = (r_p)^2
+\label{eq:r_squared}
+\end{equation}
+
+\begin{equation}
+\rho = 1 - \frac{6 \sum_{i=1}^{n} d_i^2}{n(n^2 - 1)}
+\label{eq:spearman}
+\end{equation}
+
+\newpage
+
+\clearpage
+\printbibliography[heading=bibintoc]
+
+\newpage
+
+\renewcommand{\appendixname}{Supplementary Information}
+\renewcommand{\thesection}{SI~\arabic{section}}
+\renewcommand{\thesubsection}{SI~\arabic{section}.\arabic{subsection}}
+\renewcommand{\thetable}{S\arabic{table}}
+\renewcommand{\thefigure}{S\arabic{figure}}
+
+\section*{Supplementary Information}
+\addcontentsline{toc}{section}{Supplementary Information}
+\setcounter{subsection}{0}
+\setcounter{table}{0} 
+\setcounter{figure}{0} 
+
+\setlength{\LTcapwidth}{\textwidth}
+\begin{longtable}{p{0.35\textwidth} p{0.25\textwidth} p{0.25\textwidth}}
+\caption{PDB structures for antibodies from the Jain et al. set retrieved from RCSB PDB}\label{tab:supp-S1}%
+\\
+
+\toprule
+\textbf{Name} & \textbf{PDB ID} & \textbf{Chain IDs} \\
+\midrule
+\endfirsthead
+
+\toprule
+\textbf{Name} & \textbf{PDB ID} & \textbf{Chain IDs} \\
+\midrule
+\endhead
+
+\midrule
+\multicolumn{3}{r}{\textit{Continued on next page}} \\
+\endfoot
+
+\bottomrule
+\endlastfoot
+
+Adalimumab & 6cr1 & HL \\
+Alemtuzumab & 1bey & HL \\
+Anifrolumab & 4qxg & HL \\
+Atezolizumab & 5x8l & FK \\
+Basiliximab & 1mim & HL \\
+Belimumab & 5y9k & HL \\
+Bevacizumab & 1bj1 & HL \\
+Bimagrumab & 5nhr & HL \\
+Bococizumab & 3sqo & HL \\
+Briakinumab & 5n2k & LK \\
+Certolizumab & 5wuv & HL \\
+Cetuximab & 6au5 & DC \\
+Crenezumab & 5vzx & HL \\
+Dacetuzumab & 8yx9 & HL \\
+Daclizumab & 3nfs & HL \\
+Daratumumab & 7dun & HL \\
+Drozitumab & 4od2 & BA \\
+Dupilumab & 6wgb & AB \\
+Eculizumab & 5i5k & HL \\
+Efalizumab & 3eo9 & HL \\
+Gantenerumab & 5csz & HL \\
+Gemtuzumab & 8w70 & BA \\
+Gevokizumab & 4g6k & HL \\
+Golimumab & 5yoy & RO \\
+Guselkumab & 4m6m & HL \\
+Ibalizumab & 3o2d & HL \\
+Infliximab & 5vh3 & HL \\
+Ipilimumab & 5tru & HL \\
+Ixekizumab & 6nov & AB \\
+Lampalizumab & 4d9q & HL \\
+Lebrikizumab & 4i77 & HL \\
+Lirilumab & 8tui & HL \\
+Matuzumab & 3c08 & HL \\
+Motavizumab & 3qwo & AB \\
+Muromonab & 1sy6 & HL \\
+Necitumumab & 6b3s & JK \\
+Nivolumab & 5ggq & HL \\
+Obinutuzumab & 3pp3 & HL \\
+Ofatumumab & 3giz & HL \\
+Olokizumab & 4cni & HL \\
+Omalizumab & 4x7s & HL \\
+Onartuzumab & 4k3j & HL \\
+Panitumumab & 5sx5 & HL \\
+Pembrolizumab & 5dk3 & GF \\
+Pertuzumab & 1l7i & HL \\
+Ponezumab & 3u0t & BA \\
+Radretumab & 7ah1 & AA \\
+Ramucirumab & 3s34 & HL \\
+Ranibizumab & 1cz8 & HL \\
+Rituximab & 2osl & HL \\
+Sarilumab & 8iow & HL \\
+Secukinumab & 6wio & AB \\
+Sifalimumab & 4ypg & HL \\
+Tanezumab & 4edw & HL \\
+Tocilizumab & 8j6f & HL \\
+Tralokinumab & 5l6y & HL \\
+Trastuzumab & 6bi0 & HL \\
+Tremelimumab & 5ggu & HL \\
+Urelumab & 6mhr & AB \\
+Ustekinumab & 3hmw & HL \\
+Canakinumab & 4g5z & HL \\
+Carlumab & 4dn3 & HL \\
+Epratuzumab & 5vkk & AB \\
+Fresolimumab & 3eo0 & DC \\
+Fulranumab & 4m6o & HL \\
+Lumiliximab & 3fzu & HL \\
+Natalizumab & 4irz & HL \\
+Nimotuzumab & 3gkw & HL \\
+Palivizumab & 2hwz & HL \\
+Pinatuzumab & 6and & HL \\
+
+\end{longtable}
+
+
+\newpage 
+
+\begin{table}
+\caption{Jain et al. Antibody developability metrics}
+\label{tab:jain_metrics}
+\centering
+\begin{tabular}{p{0.35\textwidth} p{0.55\textwidth}}
+\toprule
+\textbf{Metric} & \textbf{Description} \\
+\midrule
+Cross-Interaction Chromatography (CIC) & Measures non-specificity and propensity for aggregation against polyclonal human serum antibodies \\
+ PSR Binding Assay & Measures polyspecificity by flow cytometry with biotinylated human membrane proteins \\
+  CSI-BLI & Measures antibody aggregation propensity with itself \\
+   AC-SINS & Another method for antibody self-aggregation propensity \\
+    SGAC-SINS & AC-SINS under high salt conditions \\
+     Tm (DSF) & Melting temperature measurement using differential scanning fluorometry (DSF) \\ 
+      SMAC & Aggregation, precipitation and solubility assessment \\ 
+       AS SEC Slope & Aggregation and self-association \\ 
+        HIC & Measures surface hydrophobicity of antibodies for aggregation and solubility assessment \\ 
+         BVP Assay & Polyspecificity, immunogenicity and pharmocokinetics by assessing binding to Baculovirus Particles \\ 
+          ELISA & Measures antibody expression levels \\ 
+\bottomrule
+\end{tabular}
+\end{table}
+
+
+\newpage
+
+\clearpage
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{epratuzumab_rmsd.png}
+\caption{RMSD of epratuzumab all-atom simulation at 300K, 350K, and 400K for 250 ns. Each frame in the x axis represents a $10\,\mathrm{ps} time step$. Dashed red vertical lines mark the 100 ns timepoint. (A) Cumulative mean of the RMSD over the trajectory. (B) Cumulative Stdev of the RMSD over the trajectory. (C) RMSD final frame mean (top) and stdev (bottom) values for each temperature. (D) RMSD over the trajectory.}
+\label{fig:epratuzumab_rmsd}
+\end{figure}
+
+
+\newpage
+
+\clearpage
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{raw_figs/epratuzumab_differences.png}
+\caption{Difference between cumulative summary statistics of the internal contacts of the 100 ns (post-20 ns equilibration cuttoff) and first 80 ns (post-20 ns equilibration cuttoff) of the 250 ns epratuzumab simulations. (Left) difference between cumulative means. (Right) difference between cumulative stdevs.}
+\label{fig:epratuzumab_differences}
+\end{figure}
+
+
+\newpage
+
+\setlength{\LTcapwidth}{\textwidth}
+\begin{longtable}{p{0.35\textwidth} p{0.55\textwidth}}
+\caption{Table listing all descriptor features extracted from MD simulations in this work. The "Group Name" column groups the individual features that each examine a respective part of the group feature.}\label{tab:all_features}%
+\\
+\toprule
+\textbf{Group Name} & \textbf{Feature} \\
+\midrule
+\endfirsthead
+
+\toprule
+\textbf{Group Name} & \textbf{Feature} \\
+\midrule
+\endhead
+
+\midrule
+\multicolumn{2}{r}{\textit{Continued on next page}} \\
+\endfoot
+
+\bottomrule
+\endlastfoot
+
+contacts & contacts mean \\
+contacts & contacts std \\
+sasa & sasa mean \\
+sasa & sasa std \\
+partition-sasa & partition-sasa mean \\
+partition-sasa & partition-sasa std \\
+per-res-s2 & per-res-s2 mean \\
+per-res-s2 & per-res-s2 std \\
+per-block-s2 & per-block-s2 mean \\
+per-block-s2 & per-block-s2 std \\
+angles & HLangle mean \\
+angles & HLangle std \\
+angles & HC1angle mean \\
+angles & HC1angle std \\
+angles & LC1angle mean \\
+angles & LC1angle std \\
+angles & HC2angle mean \\
+angles & HC2angle std \\
+angles & LC2angle mean \\
+angles & LC2angle std \\
+distances & DCdistance mean \\
+distances & DCdistance std \\
+distances & PPdistance mean \\
+distances & PPdistance std \\
+distances & H1fromCLdistance mean \\
+distances & H1fromCLdistance std \\
+distances & L1fromCHdistance mean \\
+distances & L1fromCHdistance std \\
+distances & H2fromCLdistance mean \\
+distances & H2fromCLdistance std \\
+distances & L2fromCHdistance mean \\
+distances & L2fromCHdistance std \\
+bonds & hbonds mean \\
+bonds & hbonds std \\
+covar & covar mean \\
+covar & covar std \\
+rmsd & rmsd mean \\
+rmsd & rmsd std \\
+gyr & Rgyr mean \\
+gyr & Rgyr std \\
+gyr & Rgyr Xaxis mean \\
+gyr & Rgyr Xaxis std \\
+gyr & Rgyr Yaxis mean \\
+gyr & Rgyr Yaxis std \\
+gyr & Rgyr Zaxis mean \\
+gyr & Rgyr Zaxis std \\
+dipole & dipole X mean \\
+dipole & dipole X std \\
+dipole & dipole Y mean \\
+dipole & dipole Y std \\
+dipole & dipole Z mean \\
+dipole & dipole Z std \\
+dipole & dipole T mean \\
+dipole & dipole T std \\
+lj14 & LJpotential 1-4 mean \\
+lj14 & LJpotential 1-4 std \\
+ljSR & LJpotential short-range mean \\
+ljSR & LJpotential short-range std \\
+coloumb14 & coulomb 1-4 mean \\
+coloumb14 & coloumb 1-4 std \\
+coloumbSR & coulomb short-range mean \\
+coloumbSR & coloumb short-range std \\
+potential & potential energy mean \\
+potential & potential energy std \\
+kinetic & kinetic energy mean \\
+kinetic & kinetic energy std \\
+energy & total energy mean \\
+energy & total energy std \\
+temperature & temperature mean \\
+temperature & temperature std \\
+pv & pressur volume mean \\
+pv & pressure volume std \\
+enthalpy & enthalpy mean \\
+enthalpy & enthalpy std \\
+charge & charge mean \\
+charge & charge std \\
+rmsf & rmsf mean \\
+rmsf & rmsf std \\
+
+\end{longtable}
+
+\newpage
+
+\clearpage
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{raw_figs/epratuzumab_nvt_equilibration.png}
+\caption{Epratuzumab Martini3 coarse grained equilibration is stable for 100 ps with the NVT canonical ensemble at each temperature. (A) Kinetic energy. (B) Potential energy. (C) Temperature.}
+\label{fig:epratuzumab_nvt}
+\end{figure}
+
+
+\newpage
+
+\clearpage
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{raw_figs/epratuzumab_npt_equilibration.png}
+\caption{Epratuzumab Martini3 coarse grained equilibration converges over 100 ps with the NPT canonical ensemble at each temperature. (A) Kinetic energy. (B) Potential energy. (C) Temperature.}
+\label{fig:epratuzumab_npt}
+\end{figure}
+
+
+\end{document}

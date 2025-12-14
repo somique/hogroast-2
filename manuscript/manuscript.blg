@@ -1,0 +1,15 @@
+[0] Config.pm:328> INFO - This is Biber 2.21
+[0] Config.pm:331> INFO - Logfile is 'manuscript.blg'
+[48] biber-darwin:342> INFO - === Sun Dec 14, 2025, 14:52:57
+[89] Biber.pm:421> INFO - Reading 'manuscript.bcf'
+[154] Biber.pm:1002> INFO - Found 59 citekeys in bib section 0
+[164] Biber.pm:4487> INFO - Processing section 0
+[175] Biber.pm:4678> INFO - Looking for bibtex file 'HOGROAST.bib' for section 0
+[190] bibtex.pm:1713> INFO - LaTeX decoding ...
+[299] bibtex.pm:1519> INFO - Found BibTeX data source 'HOGROAST.bib'
+[758] UCollate.pm:68> INFO - Overriding locale 'en-US' defaults 'normalization = NFD' with 'normalization = prenormalized'
+[759] UCollate.pm:68> INFO - Overriding locale 'en-US' defaults 'variable = shifted' with 'variable = non-ignorable'
+[759] Biber.pm:4307> INFO - Sorting list 'none/global//global/global/global' of type 'entry' with template 'none' and locale 'en-US'
+[759] Biber.pm:4313> INFO - No sort tailoring available for locale 'en-US'
+[784] bbl.pm:676> INFO - Writing 'manuscript.bbl' with encoding 'UTF-8'
+[835] bbl.pm:779> INFO - Output to manuscript.bbl
