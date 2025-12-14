@@ -29,7 +29,7 @@
   ],
   "distances": [
     "Downsampled snapshot number",
-    "distance (A or nm)"
+    "distance (nm)"
   ],
   "dipole": [
     "Time (ps)",
@@ -63,9 +63,18 @@
     "Time (ps)",
     "Lennard Jones potential 1-4 (kJ/mol)"
   ],
-  "partition-sasa": [],
-  "per-block-s2": [],
-  "per-res-s2": [],
+  "partition-sasa": [
+    "Time (ps)",
+    "Area(nm^2)"
+  ],
+  "per-block-s2": [
+    "Block number", 
+    "N-H bond vector order parameter S^2"
+  ],
+  "per-res-s2": [
+    "Residue index", 
+    "N-H bond vector order parameter S^2"
+  ],
   "potential": [
     "Time (ps)",
     "Potential energy (kJ/mol)"
@@ -90,5 +99,5 @@
     "Time (ps)",
     "Temperature (K)"
   ],
-  "lambda": []
+  "lambda": ["", "Temperature dependence of the order parameter S^2"]
 }
