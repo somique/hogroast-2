@@ -1,4 +1,4 @@
-This repo contains teaching material for the ILESLA DTC 2025 statistics group project "Prediction of Antibody Developability from Molecular Dynamics Data". The files contained in this repo are to accompany the data which is held in a google drive (2x ~500MB files): https://drive.google.com/drive/folders/13_goQHv07qy-fJILSXxOxyiKtzrr5BRe?usp=sharing.
+This repo contains teaching material for the ILESLA DTC 2025 statistics group project "Prediction of Antibody Developability from Molecular Dynamics Data". The files contained in this repo are to accompany the data which is held in a google drive (2x ~500MB files).
 
 **Files**
 - introduction.pdf = An abridged version of the project report associated with this data. Contains introductory text laying out the motivation for acquiring and analysing the data, relevant work in the literature, and a methods section detailing the methods used to run the molecular dynamics and the feature analyses that generated the data.
